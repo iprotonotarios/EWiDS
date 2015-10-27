@@ -1,0 +1,33 @@
+#include "sofa.h"
+
+static uint32_t random_value = NRF_FICR->DEVICEADDR[0];
+
+void rng_init(void)
+{
+	// Enable Digital error correction
+	NRF_RNG->CONFIG	= RNG_CONFIG_DERCEN_Enabled;
+
+	// shorts for disabling after new value
+	NRF_RNF->SHORTS = RNG_SHORTS_VALRDY_STOP_Enabled;
+
+	// Enable interrupt
+	NRF_RNG->INTENSET = RNG_INTENSET_VALRDY_Enabled;
+	NVIC_EnableIRQ(RNG_IRQn);
+
+	// Generate first random number
+	NRF_RNG->TASKS_START = 1;	
+}
+
+uint32_t random(void)
+{
+	// restart random number generator to get next 8 bits
+	NRF_RNG->TASKS_START = 1;
+
+	return random_value;
+}
+
+void RNG_IRQHandler( void )
+{
+	random_value = (random_value << 8) | (uint32_t)(NRF_RNG->VALUE);
+}
+
