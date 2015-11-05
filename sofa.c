@@ -113,7 +113,7 @@ uint16_t sofa_loop(uint16_t _rendezvous)
 					break;
 
 				default:
-					printf("Unknown message type received %lx\n\r", NRF_RADIO->RXMATCH);
+					printf("UNKNOWN MSG TYPE %lx\n", NRF_RADIO->RXMATCH);
 			}
 			//printf("%ld\n\r", strobe_count);
 			break;
@@ -134,23 +134,23 @@ uint16_t sofa_loop(uint16_t _rendezvous)
 						measured_rendezvous = (uint16_t)(rtc_time()-time_strobe_start);
 					}
 					//printf("Ack received after successful beaconing\n\r");
-					//TODO send the select packet!
+					send(MSG_TYPE_SELECT,sofa_message_rx.src);
 					break;		
 				}
 			}			
-			printf("%ld\n\r", strobe_count);
+			//printf("%ld\n\r", strobe_count);
 			break;
 		
 		case WRONG_ADDR:
-			printf("packet not for us. go to sleep\n\r");
+			printf("WRONG ADDR\n");
 			break;
 			
 		case CRCFAIL:
-			printf("crc failed \n\r");
+			printf("CRC FAIL\n");
 			break;
 			
 		default:
-			printf("Unknown return_status\n\r");		
+			printf("UNKNOWN RX RETURN\n");		
 	}
 	return measured_rendezvous;
 }
@@ -160,7 +160,7 @@ void sniffer_loop(void)
 	Return_status return_status;
 	
 	//Listen for the next packet
-	return_status = receive(SECOND);
+	return_status = receive(SECOND*2);
 	switch (return_status)
 	{
 		// we are in sniffer mode. so we consider also messages for other destinations
@@ -172,7 +172,10 @@ void sniffer_loop(void)
 					break;
 
 				case MSG_TYPE_ACK:
-					printf("A %d %d %d\n",sofa_message_rx.src,sofa_message_rx.dst,sofa_message_rx.rendezvous);			
+					//printf("A %d %d %d\n",sofa_message_rx.src,sofa_message_rx.dst,sofa_message_rx.rendezvous);			
+					break;
+				case MSG_TYPE_SELECT:
+					printf("S %d %d %d\n",sofa_message_rx.src,sofa_message_rx.dst,sofa_message_rx.rendezvous);			
 					break;
 
 				default:
