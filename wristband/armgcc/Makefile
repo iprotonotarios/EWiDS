@@ -44,6 +44,7 @@ $(abspath ../../gpio.c) \
 $(abspath ../../sofa.c) \
 $(abspath ../../rng.c) \
 $(abspath ../../radio.c) \
+$(abspath ../../average.c) \
 $(abspath ../../../../../components/drivers_nrf/gpiote/nrf_drv_gpiote.c) \
 $(abspath ../../../../../components/drivers_nrf/common/nrf_drv_common.c) \
 $(abspath ../../../../../components/drivers_nrf/hal/nrf_delay.c) \
@@ -102,11 +103,12 @@ ASMFLAGS += -x assembler-with-cpp
 ASMFLAGS += -DNRF51
 ASMFLAGS += -DBOARD_WRISTBAND
 ASMFLAGS += -DBSP_DEFINES_ONLY
+
 #default target - first one defined
 default: clean nrf51422_xxac
 
 #building all targets
-all: clean
+all: 	clean
 	$(NO_ECHO)$(MAKE) -f $(MAKEFILE_NAME) -C $(MAKEFILE_DIR) -e cleanobj
 	$(NO_ECHO)$(MAKE) -f $(MAKEFILE_NAME) -C $(MAKEFILE_DIR) -e nrf51422_xxac
 
@@ -115,6 +117,9 @@ help:
 	@echo following targets are available:
 	@echo 	nrf51422_xxac
 
+sniffer: CFLAGS += -DSNIFFER
+sniffer: clean nrf51422_xxac
+	@echo CFLAGS
 
 C_SOURCE_FILE_NAMES = $(notdir $(C_SOURCE_FILES))
 C_PATHS = $(call remduplicates, $(dir $(C_SOURCE_FILES) ) )
@@ -144,7 +149,7 @@ $(BUILD_DIRECTORIES):
 # Create objects from C SRC files
 $(OBJECT_DIRECTORY)/%.o: %.c
 	@echo Compiling file: $(notdir $<)
-	$(NO_ECHO)$(CC) $(CFLAGS) $(INC_PATHS) -c -o $@ $<
+	$(NO_ECHO)$(CC) $(CFLAGS) $(CFLAGSNIFFER) $(INC_PATHS) -c -o $@ $<
 
 # Assemble files
 $(OBJECT_DIRECTORY)/%.o: %.s
@@ -198,6 +203,18 @@ upload:
 	@echo Uploading to bootloader
 	/home/ioannis/nrf51822/./prog.sh --reset
 	/home/ioannis/nrf51822/nordic_dfu_serial/./serial_dfu.py $(OUTPUT_BINARY_DIRECTORY)/nrf51422_xxac.bin
+
+upload-marco1: sniffer
+	@echo Uploading to bootloader
+	/Users/mcattani/Documents/nRF51_SDK_9/examples/EWiDS/nrf51_dfu_serial/./serial_dfu.py $(OUTPUT_BINARY_DIRECTORY)/nrf51422_xxac.bin -p /dev/tty.usbserial-DJZ32A5L
+
+upload-marco2: all
+	@echo Uploading to bootloader
+	/Users/mcattani/Documents/nRF51_SDK_9/examples/EWiDS/nrf51_dfu_serial/./serial_dfu.py $(OUTPUT_BINARY_DIRECTORY)/nrf51422_xxac.bin -p /dev/tty.usbserial-DJZ32ADM
+
+upload-marco3: all
+	@echo Uploading to bootloader
+	/Users/mcattani/Documents/nRF51_SDK_9/examples/EWiDS/nrf51_dfu_serial/./serial_dfu.py $(OUTPUT_BINARY_DIRECTORY)/nrf51422_xxac.bin -p /dev/tty.usbserial-DJZ5PTKX
 
 upload-dump:
 	@echo Uploading to bootloader

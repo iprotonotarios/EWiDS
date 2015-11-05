@@ -6,7 +6,7 @@
 #define PACKET_LENGTH_FIELD_SIZE         (0UL)  /**< Packet length field size in bits. */
 
 #define PACKET_BASE_ADDRESS_LENGTH       (4UL)  //!< Packet base address length field size in bytes
-#define PACKET_STATIC_LENGTH             (4UL)  //!< Packet static length in bytes
+#define PACKET_STATIC_LENGTH             (6UL)  //!< Packet static length in bytes
 #define PACKET_PAYLOAD_MAXSIZE           (PACKET_STATIC_LENGTH)  //!< Packet payload maximum size in bytes
 
 void radio_init()

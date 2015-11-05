@@ -26,7 +26,10 @@ void clear_rtc_flag(void);
 void radio_init(void);
 
 // Sofa mac
-void sofa_loop(void);
+uint16_t sofa_loop(uint16_t);
+
+// Sofa sniffer
+void sniffer_loop(void);
 
 // Random number generator
 void rng_init(void);
