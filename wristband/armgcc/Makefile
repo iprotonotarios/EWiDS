@@ -206,7 +206,7 @@ upload:
 
 upload-marco1: sniffer
 	@echo Uploading to bootloader
-	/Users/mcattani/Documents/nRF51_SDK_9/examples/EWiDS/nrf51_dfu_serial/./serial_dfu.py $(OUTPUT_BINARY_DIRECTORY)/nrf51422_xxac.bin -p /dev/tty.usbserial-DJZ32A5L
+	/Users/mcattani/Documents/nRF51_SDK_9/examples/EWiDS/nrf51_dfu_serial/./serial_dfu.py $(OUTPUT_BINARY_DIRECTORY)/nrf51422_xxac.bin -p /dev/tty.usbserial-DJZ32ADM
 
 upload-marco2: all
 	@echo Uploading to bootloader

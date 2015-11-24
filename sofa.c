@@ -175,7 +175,8 @@ void sniffer_loop(void)
 					//printf("A %d %d %d\n",sofa_message_rx.src,sofa_message_rx.dst,sofa_message_rx.rendezvous);			
 					break;
 				case MSG_TYPE_SELECT:
-					printf("S %d %d %d\n",sofa_message_rx.src,sofa_message_rx.dst,sofa_message_rx.rendezvous);			
+					printf("\r000001.NA.8>[%03x]%03lx.1(2.03.%04x|5.06.0007|8.09.0010)+11111111\n",(sofa_message_rx.src)%4096,(SECOND/(sofa_message_rx.rendezvous)),(sofa_message_rx.dst)%4096);
+					//printf("S %d %d %d\n",sofa_message_rx.src,sofa_message_rx.dst,sofa_message_rx.rendezvous);	
 					break;
 
 				default:
