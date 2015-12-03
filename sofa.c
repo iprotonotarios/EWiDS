@@ -1,6 +1,11 @@
 #include "sofa.h"
 
 #define MYID (uint16_t)(NRF_FICR->DEVICEID[0]%65536)
+
+// energy budget in DC*10 (how many milliseconds every second)
+#define BUDGET 40
+long int current_budget = 0;
+
  
 typedef enum {
 RX_SUCCESS,
@@ -89,15 +94,22 @@ Return_status receive(uint32_t timeout)
 
 uint16_t sofa_loop(uint16_t _rendezvous)
 {
-	uint64_t wait_time,time_strobe_start;
+	uint64_t wait_time,time_strobe_start,time_radio_start,measured_energy;
 	uint32_t strobe_count = 0;
 	Return_status return_status, ret_stat;
+	
 	
 	averaged_rendezvous = _rendezvous;
 	measured_rendezvous = 0;
 	
+	// add our periodic budget
+	current_budget += BUDGET;
+	time_radio_start = rtc_time();
+	
 	// Listening backoff
 	return_status = receive(SECOND/1024);
+		
+	
 	switch (return_status)
 	{
 		case RX_SUCCESS:
@@ -119,6 +131,9 @@ uint16_t sofa_loop(uint16_t _rendezvous)
 			break;
 			
 		case TIMEOUT:
+			// if we don't have budget, we do not initiate a communication
+			if (current_budget < 0) break;
+			
 			//printf("timed out, sending..\n\r");
 			time_strobe_start = rtc_time();
 			wait_time = rtc_time()+(SOFA_PERIOD*2); // time added sets MAX duty cycle
@@ -137,7 +152,10 @@ uint16_t sofa_loop(uint16_t _rendezvous)
 					send(MSG_TYPE_SELECT,sofa_message_rx.src);
 					break;		
 				}
-			}			
+			}
+			
+			
+					
 			//printf("%ld\n\r", strobe_count);
 			break;
 		
@@ -152,6 +170,13 @@ uint16_t sofa_loop(uint16_t _rendezvous)
 		default:
 			printf("UNKNOWN RX RETURN\n");		
 	}
+	
+	//remove from our current budget the energy consumed in this round
+	measured_energy = ((rtc_time()-time_radio_start)*1000)/SECOND;
+	//printf("T %li\n",(long int)measured_energy);
+	current_budget = current_budget - (long int)measured_energy;
+	//printf("B %li\n",current_budget);
+	
 	return measured_rendezvous;
 }
 
@@ -172,7 +197,7 @@ void sniffer_loop(void)
 					break;
 
 				case MSG_TYPE_ACK:
-					//printf("A %d %d %d\n",sofa_message_rx.src,sofa_message_rx.dst,sofa_message_rx.rendezvous);			
+					//printf("A %d %d %d\n",sofa_message_rx.src,sofa_message_rx.dst,sofa_message_rx.rendezvous);	
 					break;
 				case MSG_TYPE_SELECT:
 					printf("\r000001.NA.8>[%03x]%03lx.1(2.03.%04x|5.06.0007|8.09.0010)+11111111\n",(sofa_message_rx.src)%4096,(SECOND/(sofa_message_rx.rendezvous)),(sofa_message_rx.dst)%4096);

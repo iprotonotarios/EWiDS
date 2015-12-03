@@ -38,8 +38,9 @@ void RTC1_IRQHandler(void)
 {
 	if (NRF_RTC1->EVENTS_COMPARE[0])
     	{
-		rtc_counter += NRF_RTC1->COUNTER;
+		rtc_counter += (uint64_t)(NRF_RTC1->COUNTER);
 		NRF_RTC1->TASKS_CLEAR = 1;
+		while(NRF_RTC1->COUNTER!=0);
 		NRF_RTC1->EVENTS_COMPARE[0] = 0;
 		NRF_RTC1->CC[0]	= 16384+random();
 		rtc_flag = true;
@@ -48,7 +49,12 @@ void RTC1_IRQHandler(void)
 
 uint64_t rtc_time(void)
 {
-	return rtc_counter+NRF_RTC1->COUNTER;
+	return rtc_counter+(uint64_t)(NRF_RTC1->COUNTER);
+}
+
+uint64_t short_rtc_time(void)
+{
+	return (uint64_t)(NRF_RTC1->COUNTER);
 }
 
 bool check_rtc_flag(void)

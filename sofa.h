@@ -19,6 +19,7 @@ void gpio_init(void);
 // RTC - clocks
 void clock_init(void);
 uint64_t rtc_time(void);
+uint64_t short_rtc_time(void);
 bool check_rtc_flag(void);
 void clear_rtc_flag(void);
 
