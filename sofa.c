@@ -5,7 +5,7 @@
 // energy budget in DC*10 (how many milliseconds every second)
 #define BUDGET 40
 long int current_budget = 0;
-
+uint64_t radio_on_time = 0;
  
 typedef enum {
 RX_SUCCESS,
@@ -177,6 +177,8 @@ uint16_t sofa_loop(uint16_t _rendezvous)
 	current_budget = current_budget - (long int)measured_energy;
 	//printf("B %li\n",current_budget);
 	
+	radio_on_time += rtc_time()-time_radio_start;
+	printf("DC %lu\n",(uint32_t)(radio_on_time/(rtc_time()/100)));
 	return measured_rendezvous;
 }
 
