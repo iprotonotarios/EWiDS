@@ -1,6 +1,7 @@
 #include "sofa.h"
 
-#define MYID (uint16_t)(NRF_FICR->DEVICEID[0]%65536)
+//#define MYID (uint16_t)(NRF_FICR->DEVICEID[0]%65536)
+#define MYID (uint16_t)(NRF_UICR->CUSTOMER[20])
 
 // energy budget in DC*10 (how many milliseconds every second)
 #define BUDGET 40
@@ -109,6 +110,7 @@ uint16_t sofa_loop(uint16_t _rendezvous)
 	// Listening backoff
 	return_status = receive(SECOND/1024);
 		
+	if (nrf_gpio_pin_read(PWREN_PIN)) NVIC_SystemReset();
 	
 	switch (return_status)
 	{
@@ -150,6 +152,8 @@ uint16_t sofa_loop(uint16_t _rendezvous)
 					}
 					//printf("Ack received after successful beaconing\n\r");
 					send(MSG_TYPE_SELECT,sofa_message_rx.src);
+					send_sniffer(MYID,sofa_message_rx.src);
+					
 					break;		
 				}
 			}
@@ -186,6 +190,8 @@ void sniffer_loop(void)
 {
 	Return_status return_status;
 	
+	//if (nrf_gpio_pin_read(PWREN_PIN)) NVIC_SystemReset();
+	
 	//Listen for the next packet
 	return_status = receive(SECOND*2);
 	switch (return_status)
@@ -202,10 +208,8 @@ void sniffer_loop(void)
 					//printf("A %d %d %d\n",sofa_message_rx.src,sofa_message_rx.dst,sofa_message_rx.rendezvous);	
 					break;
 				case MSG_TYPE_SELECT:
-					printf("\r000001.NA.8>[%03x]%03lx.1(2.03.%04x|5.06.0007|8.09.0010)+11111111\n",(sofa_message_rx.src)%4096,(SECOND/(sofa_message_rx.rendezvous)),(sofa_message_rx.dst)%4096);
-					//printf("S %d %d %d\n",sofa_message_rx.src,sofa_message_rx.dst,sofa_message_rx.rendezvous);	
+					printf("\r000001.NA.8>[%03x]%03lx.1(2.03.%04x|5.06.0007|8.09.0010)+11111111\n",(sofa_message_rx.src)%4096,(SECOND/(sofa_message_rx.rendezvous)),(sofa_message_rx.dst)%4096);	
 					break;
-
 				default:
 					printf("UM: %lx\n", NRF_RADIO->RXMATCH);
 			}

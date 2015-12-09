@@ -9,8 +9,129 @@
 #define PACKET_STATIC_LENGTH             (6UL)  //!< Packet static length in bytes
 #define PACKET_PAYLOAD_MAXSIZE           (PACKET_STATIC_LENGTH)  //!< Packet payload maximum size in bytes
 
+struct
+{
+	uint32_t  density   : 10; 	// 0...1023
+	uint32_t  protocol  :  1; 	// 0 = fusion, 1 = sofa
+	uint32_t  shortId   : 11; 	// id & 0x7ff; wristband = 1 - 2047 : 0 = anchor
+
+	struct
+	{
+		uint32_t  rxOffset  : 4;  	// time in seconds / cycles since RX (0-31)
+		uint32_t  rssi      : 6;  	// = -1 * (actual signal strength + 30)
+		uint32_t  anchor    : 14; 	// = anchor id & 0x3FFF (1-16383, 0 is invalid)
+	}
+	__attribute__ ((packed)) 
+	anchor[ 3 ];
+	
+	uint32_t validation;
+} __attribute__ ((packed)) snifferData;
+
+//struct snifferPkt snifferData;
+
+void radio_init_ewids()
+{
+	/* clear events */
+// 	NRF_RADIO->EVENTS_END	= 0;
+// 	NRF_RADIO->EVENTS_ADDRESS	= 0;
+// 	NRF_RADIO->EVENTS_RSSIEND	= 0;
+// 	NRF_RADIO->EVENTS_BCMATCH	= 0;
+// 	NRF_RADIO->EVENTS_DEVMATCH	= 0;
+// 	NRF_RADIO->EVENTS_DEVMISS	= 0;
+// 	NRF_RADIO->EVENTS_PAYLOAD	= 0;
+// 	NRF_RADIO->EVENTS_READY	= 0;
+
+	/* set speed */
+	NRF_RADIO->MODE = ( RADIO_MODE_MODE_Nrf_2Mbit << RADIO_MODE_MODE_Pos );
+	/* set channel */
+	NRF_RADIO->FREQUENCY = 80;
+	/* set logic address */
+	NRF_RADIO->TXADDRESS = 5;
+	
+	/* set tx strength */
+	NRF_RADIO->TXPOWER = RADIO_TXPOWER_TXPOWER_Pos4dBm;
+	/* Packet size configuration: 16 bytes */
+	NRF_RADIO->PCNF0 = 
+		( 0 << RADIO_PCNF0_S0LEN_Pos ) |
+		( 0 << RADIO_PCNF0_S1LEN_Pos ) |
+		( 0 << RADIO_PCNF0_LFLEN_Pos );
+	NRF_RADIO->PCNF1 = 
+		( RADIO_PCNF1_WHITEEN_Disabled << RADIO_PCNF1_WHITEEN_Pos ) |
+		( RADIO_PCNF1_ENDIAN_Big       << RADIO_PCNF1_ENDIAN_Pos  ) |
+		( 4  << RADIO_PCNF1_BALEN_Pos                             ) |
+		( 16 << RADIO_PCNF1_STATLEN_Pos                           ) |
+		( 16 << RADIO_PCNF1_MAXLEN_Pos                            );
+	/* set address */
+	NRF_RADIO->PREFIX0 = 
+		( (uint32_t)0x50        ) |  // not used
+		( (uint32_t)0x51 <<   8 ) |  // beacon
+		( (uint32_t)0x52 <<  16 ) |  // beacon ack (not used)
+		( (uint32_t)0x53 <<  24 );   // sensor message (not used)
+	NRF_RADIO->PREFIX1 =
+		( (uint32_t)0x54        ) |  // task message
+		( (uint32_t)0x55 <<   8 ) |  // authentication message
+		( (uint32_t)0x56 <<  16 ) |  // direct task (not used)
+		( (uint32_t)0x57 <<  24 );   // not used
+	NRF_RADIO->BASE0   = 0x7E7E7E7E; // not used
+	NRF_RADIO->BASE1   = 0xEAEAEAEA; 
+	/* CRC Config : disable CRC */
+	NRF_RADIO->CRCCNF  = ( RADIO_CRCCNF_LEN_Disabled << RADIO_CRCCNF_LEN_Pos );
+
+	/* reset events */
+	// NRF_RADIO->EVENTS_ADDRESS = 0;
+	// NRF_RADIO->EVENTS_END = 0;
+	// NRF_RADIO->EVENTS_RSSIEND = 0;
+
+	/* enable radio interrupt */
+	//NRF_RADIO->INTENSET = ( RADIO_INTENSET_END_Enabled << RADIO_INTENSET_END_Pos );
+	//NVIC_EnableIRQ( RADIO_IRQn );
+}
+
 void radio_init()
 {
+
+    NRF_RADIO->TXPOWER   = RADIO_TXPOWER_TXPOWER_Pos4dBm; 
+    NRF_RADIO->FREQUENCY = 80;
+    NRF_RADIO->MODE      = (RADIO_MODE_MODE_Nrf_2Mbit << RADIO_MODE_MODE_Pos);
+
+	NRF_RADIO->PREFIX0 = 
+	( (uint32_t)0x50        ) |  // not used
+	( (uint32_t)0x51 <<   8 ) |  // beacon
+	( (uint32_t)0x52 <<  16 ) |  // beacon ack (not used)
+	( (uint32_t)0x53 <<  24 );   // sensor message (not used)
+	NRF_RADIO->PREFIX1 =
+	( (uint32_t)0x54        ) |  // task message
+	( (uint32_t)0x55 <<   8 ) |  // authentication message
+	( (uint32_t)0x56 <<  16 ) |  // direct task (not used)
+	( (uint32_t)0x57 <<  24 );   // not used
+	NRF_RADIO->BASE0   = 0x7E7E7E7E; // not used
+	NRF_RADIO->BASE1   = 0xEAEAEAEA; 
+
+
+    NRF_RADIO->RXADDRESSES = 	14UL;
+				/*(1 << MSG_TYPE_BEACON) 	|
+				(1 << MSG_TYPE_ACK   )	|
+				(1 << MSG_TYPE_SELECT);    // 00001110*/
+
+NRF_RADIO->PCNF0 = 
+	( 0 << RADIO_PCNF0_S0LEN_Pos ) |
+	( 0 << RADIO_PCNF0_S1LEN_Pos ) |
+	( 0 << RADIO_PCNF0_LFLEN_Pos );
+NRF_RADIO->PCNF1 = 
+	( RADIO_PCNF1_WHITEEN_Disabled << RADIO_PCNF1_WHITEEN_Pos ) |
+	( RADIO_PCNF1_ENDIAN_Big       << RADIO_PCNF1_ENDIAN_Pos  ) |
+	( 4  << RADIO_PCNF1_BALEN_Pos                             ) |
+	( 16 << RADIO_PCNF1_STATLEN_Pos                           ) |
+	( 16 << RADIO_PCNF1_MAXLEN_Pos                            );
+
+	NRF_RADIO->CRCCNF  = ( RADIO_CRCCNF_LEN_Disabled << RADIO_CRCCNF_LEN_Pos );
+
+    
+}
+
+void radio_init_WORKING()
+{
+
     // Radio config
     NRF_RADIO->TXPOWER   = RADIO_TXPOWER_TXPOWER_Neg20dBm; // -20 dBm
     NRF_RADIO->FREQUENCY = 0UL;           // Frequency bin 0, 2400 Hz - before wifi
@@ -53,4 +174,52 @@ void radio_init()
     NRF_RADIO->CRCINIT = 0xFFUL;        // Initial value
     NRF_RADIO->CRCPOLY = 0x107UL;       // CRC poly: x^8+x^2^x^1+1
     
+}
+
+uint32_t hash( uint8_t* pData, int count )
+{
+	uint32_t hash = 2166136261UL; // 32bit FNV offset
+	int      i    = 0;
+
+	for ( i = 0; i < count; i++ )
+	{
+		hash ^= (uint32_t)( pData[ i ] );
+		hash *= 16777619UL; // 32bit FNV prime
+	}
+
+	return hash;
+}
+
+
+void send_sniffer(uint16_t src,uint16_t dst){
+	
+	// if ( NRF_RADIO->STATE != 0 )
+	// {
+	// 	NRF_RADIO->TASKS_DISABLE = 1;
+	// 	while ( NRF_RADIO->STATE );
+	// }
+	//radio_init_ewids();
+
+	// prepare packet
+	snifferData.density = 66;
+	snifferData.shortId = src;
+	snifferData.anchor[0].anchor = dst;
+	snifferData.validation = hash( (uint8_t*)(&snifferData), 12 );
+	NRF_RADIO->PACKETPTR = (uint32_t)&snifferData;
+    	// Switch to tx
+	NRF_RADIO->TXADDRESS = 5; 
+    	// switch to rx
+    	NRF_RADIO->EVENTS_READY = 0U;
+    	NRF_RADIO->TASKS_TXEN   = 1;
+    	while (NRF_RADIO->EVENTS_READY == 0U);
+    	NRF_RADIO->EVENTS_END  = 0U;
+	// send the packet
+    	NRF_RADIO->TASKS_START = 1U;
+    	while (NRF_RADIO->EVENTS_END == 0U);
+    	// Disable radio
+    	NRF_RADIO->EVENTS_DISABLED = 0U;
+    	NRF_RADIO->TASKS_DISABLE = 1U;
+    	while (NRF_RADIO->EVENTS_DISABLED == 0U);
+
+	//radio_init();
 }
