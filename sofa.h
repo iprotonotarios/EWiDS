@@ -25,13 +25,14 @@ void clear_rtc_flag(void);
 
 // Radio
 void radio_init(void);
-void send_sniffer(uint16_t src,uint16_t dst);
+void send_sniffer(uint16_t,uint16_t,uint16_t,uint16_t,uint8_t);
 		
 // Sofa mac
 uint16_t sofa_loop(uint16_t);
 
 // Sofa sniffer
 void sniffer_loop(void);
+void checkin_loop(void);
 
 // Random number generator
 void rng_init(void);

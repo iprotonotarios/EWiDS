@@ -26,6 +26,7 @@ typedef struct
 Sofa_message sofa_message_tx;
 Sofa_message sofa_message_rx;
 uint16_t measured_rendezvous, averaged_rendezvous;
+uint8_t last_rssi = 0;
 
 
 void send(uint32_t _type, uint16_t _dst)
@@ -59,6 +60,10 @@ Return_status receive(uint32_t timeout)
     	uint32_t wait_time = 0;
 	NRF_RADIO->PACKETPTR = (uint32_t)&sofa_message_rx;
     	NRF_RADIO->EVENTS_READY = 0U;
+	
+	// enable the RSSI once on every received packet
+	NRF_RADIO->SHORTS |= RADIO_SHORTS_ADDRESS_RSSISTART_Msk;
+	
     	// Enable radio and wait for ready
     	NRF_RADIO->TASKS_RXEN = 1U;
     	while (NRF_RADIO->EVENTS_READY == 0U);
@@ -76,6 +81,10 @@ Return_status receive(uint32_t timeout)
 		if (NRF_RADIO->CRCSTATUS == 1U) 
     		{
 			return_status = RX_SUCCESS;
+	              
+			last_rssi = (uint8_t)( NRF_RADIO->RSSISAMPLE ); 
+			// the rssi measurement must be stopped manually (hw bug)
+			NRF_RADIO->TASKS_RSSISTOP = 1;
 	    	} else {
 			return_status =  CRCFAIL;
 		}
@@ -99,18 +108,20 @@ uint16_t sofa_loop(uint16_t _rendezvous)
 	uint32_t strobe_count = 0;
 	Return_status return_status, ret_stat;
 	
-	
 	averaged_rendezvous = _rendezvous;
 	measured_rendezvous = 0;
 	
-	// add our periodic budget
+	// Add our periodic budget
 	current_budget += BUDGET;
 	time_radio_start = rtc_time();
 	
-	// Listening backoff
-	return_status = receive(SECOND/1024);
-		
+	// If the usb is connected, reset
 	if (nrf_gpio_pin_read(PWREN_PIN)) NVIC_SystemReset();
+	
+	// Listening backoff
+	nrf_gpio_pin_set( LED_RED );
+	return_status = receive(SECOND/1024);
+	nrf_gpio_pin_clear( LED_RED );
 	
 	switch (return_status)
 	{
@@ -151,8 +162,8 @@ uint16_t sofa_loop(uint16_t _rendezvous)
 						measured_rendezvous = (uint16_t)(rtc_time()-time_strobe_start);
 					}
 					//printf("Ack received after successful beaconing\n\r");
-					send(MSG_TYPE_SELECT,sofa_message_rx.src);
-					send_sniffer(MYID,sofa_message_rx.src);
+					//send(MSG_TYPE_SELECT,sofa_message_rx.src);
+					send_sniffer(MYID,sofa_message_rx.src,SECOND/averaged_rendezvous,SECOND/sofa_message_rx.rendezvous,last_rssi);
 					
 					break;		
 				}
@@ -228,3 +239,57 @@ void sniffer_loop(void)
 	}
 }
 
+void checkin_loop(void)
+{
+	Return_status return_status;
+	
+	//if (nrf_gpio_pin_read(PWREN_PIN)) NVIC_SystemReset();
+	
+	//Listen for the next packet
+  	
+	return_status = receive(SECOND*2);
+	switch (return_status)
+	{
+		// we are in sniffer mode. so we consider also messages for other destinations
+		case WRONG_ADDR:
+		case RX_SUCCESS:
+			switch (NRF_RADIO->RXMATCH)
+			{
+				case MSG_TYPE_BEACON:
+					if (last_rssi < 40){
+						nrf_gpio_pin_set(LED_RED);
+						printf("%04u\n",sofa_message_rx.src);
+						nrf_gpio_pin_clear(LED_RED);
+					}
+					break;
+
+				case MSG_TYPE_ACK:
+					if (last_rssi < 40){
+						nrf_gpio_pin_set(LED_RED);
+						printf("%04u\n",sofa_message_rx.src);
+						nrf_gpio_pin_clear(LED_RED);
+					}
+					break;
+				case MSG_TYPE_SELECT:	
+					break;
+				default:
+					break;
+					//printf("UM: %lx\n", NRF_RADIO->RXMATCH);
+			}
+			break;
+			
+		case TIMEOUT:
+			//printf("TIMEOUT\n");
+			break;
+			
+		case CRCFAIL:
+			//printf("CRC\n");
+			break;
+			
+		default:
+			break;
+			//printf("US: %d\n",return_status);		
+	}
+  	
+	
+}
